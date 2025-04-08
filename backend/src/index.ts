@@ -6,6 +6,14 @@ import { repoRoutes } from './routes/repo';
 // Load environment variables
 dotenv.config();
 
+// Debug logging for environment variables
+console.log('Environment variables loaded:', {
+  PORT: process.env.PORT,
+  NODE_ENV: process.env.NODE_ENV,
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY ? 'Set' : 'Not set',
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN ? 'Set' : 'Not set'
+});
+
 const app = express();
 const port = process.env.PORT || 3000;
 
