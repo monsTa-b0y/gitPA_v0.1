@@ -51,7 +51,8 @@
                   : 'bg-gray-100 text-gray-900'
               ]"
             >
-              {{ message.content }}
+              <MarkdownRenderer v-if="message.role === 'assistant'" :content="message.content" />
+              <template v-else>{{ message.content }}</template>
             </div>
           </div>
         </div>
@@ -79,6 +80,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRepoStore } from './stores/repo';
+import MarkdownRenderer from './components/MarkdownRenderer.vue';
 
 const repoStore = useRepoStore();
 const query = ref('');
