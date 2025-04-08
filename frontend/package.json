@@ -13,6 +13,8 @@
     "@heroicons/vue": "^2.2.0",
     "@vueuse/core": "^13.1.0",
     "axios": "^1.8.4",
+    "highlight.js": "^11.11.1",
+    "marked": "^15.0.8",
     "pinia": "^3.0.1",
     "vue": "^3.5.13"
   },

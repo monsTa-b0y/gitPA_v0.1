@@ -7,8 +7,8 @@
     </header>
 
     <main class="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-      <!-- Repository URL Input -->
-      <div class="mb-8">
+      <!-- Repository URL Input (only shown when no repository is selected) -->
+      <div v-if="!repoStore.repoInfo" class="mb-8">
         <form @submit.prevent="handleScan" class="flex gap-4">
           <input
             v-model="repoStore.url"
@@ -51,7 +51,8 @@
                   : 'bg-gray-100 text-gray-900'
               ]"
             >
-              {{ message.content }}
+              <MarkdownRenderer v-if="message.role === 'assistant'" :content="message.content" />
+              <template v-else>{{ message.content }}</template>
             </div>
           </div>
         </div>
@@ -79,6 +80,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useRepoStore } from './stores/repo';
+import MarkdownRenderer from './components/MarkdownRenderer.vue';
 
 const repoStore = useRepoStore();
 const query = ref('');

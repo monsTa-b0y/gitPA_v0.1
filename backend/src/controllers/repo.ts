@@ -99,7 +99,7 @@ export async function processQuery(repoUrl: string, query: string) {
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful assistant that answers questions about GitHub repositories.',
+          content: 'You are a helpful assistant that answers questions about GitHub repositories. Always format your responses using markdown. Use code blocks with language specification for code examples, and use proper markdown formatting for lists, headings, and other elements.',
         },
         {
           role: 'user',

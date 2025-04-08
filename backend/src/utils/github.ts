@@ -2,7 +2,11 @@
  * Extracts owner and repository name from a GitHub URL
  */
 export function extractRepoInfo(url: string) {
-  const match = url.match(/github\.com\/([^/]+)\/([^/]+)/);
+  // Remove any duplicate https:// or http:// prefixes
+  const cleanUrl = url.replace(/^(https?:\/\/)+/, 'https://');
+  
+  // Extract the path part after github.com
+  const match = cleanUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
   if (!match) {
     throw new Error('Invalid GitHub repository URL');
   }
