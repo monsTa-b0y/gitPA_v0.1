@@ -55,6 +55,9 @@ gitPA_v0.1/
      - A GitHub Personal Access Token (from GitHub Developer Settings)
      - An OpenAI API Key (from OpenAI Platform)
    - For the frontend, configure the backend API URL (default: http://localhost:3000)
+   - In case you get an `Invalid API key error`. Try setting your api key manually in the command line
+      - For powershell: `$env:OPENAI_API_KEY = "your-api-key"`
+      - For bash: `export OPENAI_API_KEY="your-api-key"`
 
 4. Start development servers:
    ```bash
