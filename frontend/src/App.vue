@@ -70,6 +70,11 @@
               >
                 <MarkdownRenderer v-if="message.role === 'assistant'" :content="message.content" />
                 <template v-else>{{ message.content }}</template>
+                <CodeBlock 
+                  v-if="message.fileContent"
+                  :content="message.fileContent.content"
+                  :fileName="message.fileContent.fileName"
+                />
               </div>
             </div>
             
@@ -117,6 +122,7 @@ import { useRepositoryStore } from './stores/repository';
 import { useRepoStore } from './stores/repo';
 import FileStructure from './components/FileStructure.vue';
 import MarkdownRenderer from './components/MarkdownRenderer.vue';
+import CodeBlock from './components/CodeBlock.vue';
 
 // Repository store for file structure
 const repositoryStore = useRepositoryStore();

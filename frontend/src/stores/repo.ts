@@ -1,21 +1,29 @@
 import { defineStore } from 'pinia';
 import axios from 'axios';
 
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  fileContent?: {
+    content: string;
+    fileName: string;
+  };
+}
+
+interface RepoInfo {
+  name: string;
+  owner: string;
+  description: string;
+  summary: string;
+}
+
 interface RepoState {
   url: string;
   isLoading: boolean;
   error: string | null;
-  repoInfo: {
-    name: string;
-    owner: string;
-    description: string;
-    summary: string;
-  } | null;
-  messages: {
-    id: number;
-    role: 'user' | 'assistant';
-    content: string;
-  }[];
+  repoInfo: RepoInfo | null;
+  messages: Message[];
 }
 
 export const useRepoStore = defineStore('repo', {
@@ -29,21 +37,23 @@ export const useRepoStore = defineStore('repo', {
 
   actions: {
     async scanRepository(url: string) {
+      this.url = url;
+      this.messages = [];
       this.isLoading = true;
       this.error = null;
-      this.url = url;
+
       try {
-        const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/repo/scan`, { url });
+        const response = await axios.post('http://localhost:3000/api/repo/scan', { url });
         this.repoInfo = response.data.repo;
-        this.messages = [
-          {
-            id: Date.now(),
-            role: 'assistant',
-            content: `Repository scanned successfully! Here's a summary:\n\n${response.data.repo.summary}`,
-          },
-        ];
+        
+        // Add initial system message
+        this.messages.push({
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `I've analyzed the repository "${this.repoInfo.name}". How can I help you with it?`
+        });
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to scan repository';
+        this.error = 'Failed to scan repository';
         console.error('Error scanning repository:', error);
       } finally {
         this.isLoading = false;
@@ -51,28 +61,32 @@ export const useRepoStore = defineStore('repo', {
     },
 
     async sendQuery(query: string) {
-      if (!this.repoInfo) return;
+      if (!this.url) return;
 
-      this.isLoading = true;
+      // Add user message
       this.messages.push({
-        id: Date.now(),
+        id: Date.now().toString(),
         role: 'user',
-        content: query,
+        content: query
       });
 
+      this.isLoading = true;
+      this.error = null;
+
       try {
-        const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/repo/assist`, {
+        const response = await axios.post('http://localhost:3000/api/repo/assist', {
           repoUrl: this.url,
-          query,
+          query
         });
 
         this.messages.push({
-          id: Date.now(),
+          id: (Date.now() + 1).toString(),
           role: 'assistant',
           content: response.data.response,
+          fileContent: response.data.fileContent
         });
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Failed to process query';
+        this.error = 'Failed to process query';
         console.error('Error processing query:', error);
       } finally {
         this.isLoading = false;
