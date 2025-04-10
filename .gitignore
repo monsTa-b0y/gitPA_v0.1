@@ -10,7 +10,9 @@ build/
 .env
 .env.local
 .env.*.local
-backend\load-env.sh
+backend/.env
+frontend/.env
+backend/load-env.sh
 
 # IDE files
 .vscode/

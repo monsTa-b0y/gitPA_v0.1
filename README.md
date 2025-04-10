@@ -48,7 +48,14 @@ gitPA_v0.1/
    cd ../backend
    pnpm install
    ```
-3. Set up environment variables (see .env.example)
+
+3. Set up environment variables:
+   - Copy `.env.example` to `.env` in both frontend and backend directories
+   - For the backend, you'll need:
+     - A GitHub Personal Access Token (from GitHub Developer Settings)
+     - An OpenAI API Key (from OpenAI Platform)
+   - For the frontend, configure the backend API URL (default: http://localhost:3000)
+
 4. Start development servers:
    ```bash
    # Start frontend
@@ -59,6 +66,17 @@ gitPA_v0.1/
    cd ../backend
    pnpm dev
    ```
+
+## Environment Variables
+
+### Backend (.env)
+- `PORT`: The port number for the backend server (default: 3000)
+- `NODE_ENV`: The environment mode (development/production)
+- `GITHUB_TOKEN`: Your GitHub Personal Access Token
+- `OPENAI_API_KEY`: Your OpenAI API Key
+
+### Frontend (.env)
+- `VITE_API_BASE_URL`: The URL of your backend server
 
 ## License
 
