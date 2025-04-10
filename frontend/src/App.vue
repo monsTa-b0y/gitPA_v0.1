@@ -15,13 +15,13 @@
           />
           <button
             @click="scanRepository"
-            :disabled="loading"
+            :disabled="scanning"
             class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
           >
-            {{ loading ? 'Scanning...' : 'Scan' }}
+            {{ scanning ? 'Scanning...' : 'Scan' }}
           </button>
         </div>
-        <p v-if="error" class="mt-2 text-red-500">{{ error }}</p>
+        <p v-if="scanError" class="mt-2 text-red-500">{{ scanError }}</p>
       </div>
 
       <div class="flex w-full gap-4 bg-gray-900">
@@ -38,9 +38,18 @@
           <!-- Chat Messages -->
           <div class="flex-1 p-4 overflow-y-auto" ref="messagesContainer">
             <!-- Initial System Message -->
-            <div class="flex justify-start mb-4">
+            <div v-if="repoStore.repoInfo" class="flex justify-start mb-4">
               <div class="max-w-[80%] bg-gray-700 rounded-lg p-4 text-gray-100">
-                <p>Repository structure has been loaded. You can ask questions about the repository contents and structure.</p>
+                <h3 class="text-lg font-semibold mb-2">{{ repoStore.repoInfo.name }}</h3>
+                <p class="mb-2">{{ repoStore.repoInfo.description }}</p>
+                <p class="mb-2">{{ repoStore.repoInfo.summary }}</p>
+                <a 
+                  :href="repositoryUrl" 
+                  target="_blank" 
+                  class="text-blue-400 hover:text-blue-300 underline"
+                >
+                  View on GitHub
+                </a>
               </div>
             </div>
             
@@ -65,7 +74,7 @@
             </div>
             
             <!-- Loading indicator -->
-            <div v-if="loading && messages.length > 0" class="flex justify-start mb-4">
+            <div v-if="chatLoading && messages.length > 0" class="flex justify-start mb-4">
               <div class="bg-gray-700 rounded-lg p-4 text-gray-300">
                 <div class="flex space-x-2">
                   <div class="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
@@ -84,12 +93,12 @@
                 type="text"
                 placeholder="Ask a question about the repository..."
                 class="flex-1 px-4 py-2 bg-gray-700 text-white rounded focus:outline-none focus:ring-2 focus:ring-blue-500 border border-gray-600"
-                :disabled="loading"
+                :disabled="chatLoading"
               />
               <button
                 type="submit"
                 class="px-4 py-2 bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50 transition-colors"
-                :disabled="loading || !query.trim()"
+                :disabled="chatLoading || !query.trim()"
               >
                 Send
               </button>
@@ -112,18 +121,13 @@ import MarkdownRenderer from './components/MarkdownRenderer.vue';
 // Repository store for file structure
 const repositoryStore = useRepositoryStore();
 const repositoryUrl = ref('');
-const { fileStructure, loading, error } = storeToRefs(repositoryStore);
+const { fileStructure, loading: scanning, error: scanError } = storeToRefs(repositoryStore);
 
 // Repo store for chat functionality
 const repoStore = useRepoStore();
 const query = ref('');
-const messages = ref([
-  {
-    id: Date.now(),
-    role: 'assistant',
-    content: 'Welcome! Please scan a GitHub repository to begin.'
-  }
-]);
+// Use storeToRefs to get reactive access to store state
+const { messages, isLoading: chatLoading, error: chatError } = storeToRefs(repoStore);
 
 // Explicitly type the ref as HTMLElement
 const messagesContainer = ref<HTMLElement | null>(null);
@@ -143,56 +147,28 @@ const scanRepository = async () => {
     await repositoryStore.scanRepository(repositoryUrl.value);
     if (fileStructure.value.length > 0) {
       // Also update the repo store for chat functionality
-      repoStore.url = repositoryUrl.value;
-      messages.value = [
-        {
-          id: Date.now(),
-          role: 'assistant',
-          content: 'Repository structure has been loaded. You can ask questions about the repository contents and structure.'
-        }
-      ];
+      // The repoStore.scanRepository action handles setting the initial message
+      await repoStore.scanRepository(repositoryUrl.value);
     }
   }
 };
 
 // Send query to backend
 const sendQuery = async () => {
-  if (!query.value.trim() || loading.value) return;
+  if (!query.value.trim() || chatLoading.value || !repoStore.url) return;
   
-  // Add user message
-  messages.value.push({
-    id: Date.now(),
-    role: 'user',
-    content: query.value
-  });
+  const currentQuery = query.value;
+  // Clear input immediately
+  query.value = '';
   
   try {
-    // Send message and show loading state
-    loading.value = true;
-    
-    // You can add the actual API call here
-    // For now, just add a mock response after a short delay
-    setTimeout(() => {
-      messages.value.push({
-        id: Date.now(),
-        role: 'assistant',
-        content: `This is a placeholder response to "${query.value}". In a real implementation, this would call your backend API to process the query about the repository.`
-      });
-      loading.value = false;
-    }, 1000);
-    
-    // Clear input
-    query.value = '';
-    
+    // Call the repoStore action to send query to the backend
+    // This action will update the messages and loading state in the store
+    await repoStore.sendQuery(currentQuery);
   } catch (error) {
     console.error('Error sending query:', error);
-    // Add error message
-    messages.value.push({
-      id: Date.now(),
-      role: 'assistant',
-      content: 'Sorry, there was an error processing your query. Please try again.'
-    });
-    loading.value = false;
+    // The store might handle error display, or we can add a local error message if needed
+    // For simplicity, we rely on the store's error handling
   }
 };
 </script>

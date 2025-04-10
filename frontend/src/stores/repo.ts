@@ -31,6 +31,7 @@ export const useRepoStore = defineStore('repo', {
     async scanRepository(url: string) {
       this.isLoading = true;
       this.error = null;
+      this.url = url;
       try {
         const response = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/api/repo/scan`, { url });
         this.repoInfo = response.data.repo;

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { marked } from 'marked';
 import hljs from 'highlight.js';
-import 'highlight.js/styles/github.css';
+import 'highlight.js/styles/github-dark.css';
 import { computed } from 'vue';
 
 const props = defineProps<{
@@ -22,16 +22,16 @@ const renderedContent = computed(() => marked(props.content));
 </script>
 
 <template>
-  <div class="prose prose-sm max-w-none text-left" v-html="renderedContent"></div>
+  <div class="prose prose-sm max-w-none text-left dark:prose-invert" v-html="renderedContent"></div>
 </template>
 
 <style scoped>
 :deep(pre) {
-  @apply bg-gray-100 p-4 rounded-md overflow-x-auto text-left;
+  @apply bg-gray-800 p-4 rounded-md overflow-x-auto text-left;
 }
 
 :deep(code) {
-  @apply font-mono text-sm text-left;
+  @apply font-mono text-sm text-left text-white;
 }
 
 :deep(p) {
@@ -59,10 +59,10 @@ const renderedContent = computed(() => marked(props.content));
 }
 
 :deep(blockquote) {
-  @apply border-l-4 border-gray-300 pl-4 italic my-2 text-left;
+  @apply border-l-4 border-gray-600 pl-4 italic my-2 text-left;
 }
 
 :deep(a) {
-  @apply text-primary-600 hover:text-primary-700 underline text-left;
+  @apply text-blue-400 hover:text-blue-300 underline text-left;
 }
 </style> 
