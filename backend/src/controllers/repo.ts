@@ -1,6 +1,7 @@
 import axios from 'axios';
 import OpenAI from 'openai';
 import { extractRepoInfo, getGitHubHeaders } from '../utils/github';
+import { GITHUB_TOKEN } from '../config';
 
 // Debug logging for API key
 const apiKey = process.env.OPENAI_API_KEY;
@@ -84,44 +85,64 @@ export async function scanRepository(url: string) {
  */
 export async function processQuery(repoUrl: string, query: string) {
   try {
-    console.log('Processing query:', { repoUrl, query });
-    const { owner, repo } = extractRepoInfo(repoUrl);
-    const headers = getGitHubHeaders();
+    // Extract owner and repo from GitHub URL
+    const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+    if (!match) {
+      throw new Error('Invalid GitHub URL format');
+    }
 
-    // Fetch relevant files based on the query
-    // This is a simplified version - in a real implementation, you'd want to:
-    // 1. Use the GitHub search API to find relevant files
-    // 2. Fetch and analyze file contents
-    // 3. Use embeddings for better context matching
-    console.log('Generating response using OpenAI...');
+    const [, owner, repo] = match;
+
+    // Fetch repository contents
+    const response = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/contents`,
+      {
+        headers: {
+          'Authorization': `Bearer ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3+json'
+        }
+      }
+    );
+
+    // Get file structure
+    const fileStructure = response.data.map((item: any) => ({
+      name: item.name,
+      path: item.path,
+      type: item.type
+    }));
+
+    // Create a prompt for OpenAI
+    const prompt = `Given the following repository structure and user query, please provide a detailed response.
+
+Repository Structure:
+${JSON.stringify(fileStructure, null, 2)}
+
+User Query: ${query}
+
+Please analyze the repository structure and provide a comprehensive answer based on the actual files present in the repository.`;
+
+    // Call OpenAI API
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: "gpt-4",
       messages: [
         {
-          role: 'system',
-          content: 'You are a helpful assistant that answers questions about GitHub repositories. Always format your responses using markdown. Use code blocks with language specification for code examples, and use proper markdown formatting for lists, headings, and other elements.',
+          role: "system",
+          content: "You are a helpful assistant that analyzes GitHub repositories and provides detailed information about their contents."
         },
         {
-          role: 'user',
-          content: `Repository: ${owner}/${repo}\nQuery: ${query}`,
-        },
+          role: "user",
+          content: prompt
+        }
       ],
+      temperature: 0.7,
+      max_tokens: 1000
     });
-    console.log('Response generated successfully');
 
     return {
-      status: 'success',
-      response: completion.choices[0].message.content,
+      response: completion.choices[0].message?.content || "No response generated"
     };
   } catch (error) {
     console.error('Error processing query:', error);
-    if (axios.isAxiosError(error)) {
-      console.error('Axios error details:', {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-      });
-    }
     throw error;
   }
 } 

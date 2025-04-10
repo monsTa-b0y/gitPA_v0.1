@@ -16,6 +16,59 @@ const querySchema = z.object({
   query: z.string().min(1)
 });
 
+// Helper function to recursively fetch repository contents
+async function fetchRepoContents(owner: string, repo: string, path: string = ''): Promise<any[]> {
+  const response = await axios.get(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+    {
+      headers: {
+        'Authorization': `Bearer ${GITHUB_TOKEN}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    }
+  );
+
+  const contents = await Promise.all(response.data.map(async (item: any) => {
+    if (item.type === 'dir') {
+      return {
+        name: item.name,
+        path: item.path,
+        type: 'dir',
+        children: await fetchRepoContents(owner, repo, item.path)
+      };
+    } else {
+      // Fetch file content if it's a text file
+      let content = '';
+      if (item.size < 1000000) { // Only fetch files smaller than 1MB
+        try {
+          const fileResponse = await axios.get(
+            `https://api.github.com/repos/${owner}/${repo}/contents/${item.path}`,
+            {
+              headers: {
+                'Authorization': `Bearer ${GITHUB_TOKEN}`,
+                'Accept': 'application/vnd.github.v3.raw'
+              }
+            }
+          );
+          content = fileResponse.data;
+        } catch (error) {
+          console.error(`Error fetching content for ${item.path}:`, error);
+        }
+      }
+      
+      return {
+        name: item.name,
+        path: item.path,
+        type: 'file',
+        content: content,
+        size: item.size
+      };
+    }
+  }));
+
+  return contents;
+}
+
 // Scan repository endpoint
 router.post('/scan', async (req, res) => {
   const { url } = req.body;
@@ -32,9 +85,9 @@ router.post('/scan', async (req, res) => {
 
     const [, owner, repo] = match;
 
-    // Fetch repository contents
-    const response = await axios.get(
-      `https://api.github.com/repos/${owner}/${repo}/contents`,
+    // Fetch repository metadata
+    const metadataResponse = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}`,
       {
         headers: {
           'Authorization': `Bearer ${GITHUB_TOKEN}`,
@@ -43,17 +96,24 @@ router.post('/scan', async (req, res) => {
       }
     );
 
-    // Transform GitHub API response into our file structure format
-    const fileStructure = response.data.map((item: any) => ({
-      name: item.name,
-      path: item.path,
-      type: item.type === 'dir' ? 'dir' : 'file',
-      children: item.type === 'dir' ? [] : undefined
-    }));
+    // Fetch all repository contents recursively
+    const fileStructure = await fetchRepoContents(owner, repo);
+
+    // Generate a summary based on repository metadata and contents
+    const summary = `This is a ${metadataResponse.data.language || 'multi-language'} repository created by ${owner}. 
+    ${metadataResponse.data.description || 'No description provided.'}
+    It has ${metadataResponse.data.stargazers_count} stars and ${metadataResponse.data.forks_count} forks.
+    The repository contains ${fileStructure.length} top-level items including directories and files.`;
 
     res.json({ 
       status: 'success', 
-      fileStructure 
+      fileStructure,
+      repo: {
+        name: metadataResponse.data.name,
+        owner: metadataResponse.data.owner.login,
+        description: metadataResponse.data.description,
+        summary: summary
+      }
     });
   } catch (error) {
     console.error('Repository scan error:', error);
