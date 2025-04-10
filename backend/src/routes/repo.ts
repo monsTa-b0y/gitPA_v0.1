@@ -1,8 +1,9 @@
 import express from 'express';
 import { z } from 'zod';
-import { scanRepository, processQuery } from '../controllers/repo';
+import { scanRepository, processQuery, logFileStoreContents } from '../controllers/repo';
 import axios from 'axios';
 import { GITHUB_TOKEN } from '../config';
+import { fileStore } from '../services/fileStore';
 
 const router = express.Router();
 
@@ -56,6 +57,8 @@ export async function fetchRepoContents(owner: string, repo: string, path: strin
             }
           );
           content = fileResponse.data;
+          // Store file content in the file store
+          fileStore.setFile(item.path, content);
         } catch (error) {
           console.error(`Error fetching content for ${item.path}:`, error);
         }
@@ -109,6 +112,9 @@ router.post('/scan', async (req, res) => {
     ${metadataResponse.data.description || 'No description provided.'}
     It has ${metadataResponse.data.stargazers_count} stars and ${metadataResponse.data.forks_count} forks.
     The repository contains ${fileStructure.length} top-level items including directories and files.`;
+
+    // Log file store contents after scanning
+    logFileStoreContents();
 
     res.json({ 
       status: 'success', 
