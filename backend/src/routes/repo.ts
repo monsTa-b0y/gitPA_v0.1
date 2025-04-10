@@ -16,8 +16,13 @@ const querySchema = z.object({
   query: z.string().min(1)
 });
 
+const fileContentSchema = z.object({
+  repoUrl: z.string().url().regex(/github\.com\/[^/]+\/[^/]+/),
+  filePath: z.string().min(1)
+});
+
 // Helper function to recursively fetch repository contents
-async function fetchRepoContents(owner: string, repo: string, path: string = ''): Promise<any[]> {
+export async function fetchRepoContents(owner: string, repo: string, path: string = ''): Promise<any[]> {
   const response = await axios.get(
     `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
     {
@@ -137,6 +142,47 @@ router.post('/assist', async (req, res) => {
       console.error('Query processing error:', error);
       res.status(500).json({ error: 'Failed to process query' });
     }
+  }
+});
+
+// Get file content endpoint
+router.post('/file-content', async (req, res) => {
+  try {
+    const { repoUrl, filePath } = fileContentSchema.parse(req.body);
+    
+    // Extract owner and repo from GitHub URL
+    const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+    if (!match) {
+      return res.status(400).json({ 
+        status: 'error', 
+        message: 'Invalid GitHub URL format' 
+      });
+    }
+
+    const [, owner, repo] = match;
+
+    // Fetch file content
+    const response = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${GITHUB_TOKEN}`,
+          'Accept': 'application/vnd.github.v3.raw'
+        }
+      }
+    );
+
+    res.json({ 
+      status: 'success',
+      content: response.data,
+      fileName: filePath.split('/').pop()
+    });
+  } catch (error) {
+    console.error('Error fetching file content:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Failed to fetch file content' 
+    });
   }
 });
 
